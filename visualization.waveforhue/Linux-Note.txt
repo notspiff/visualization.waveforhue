@@ -1,0 +1,1 @@
+You must rename WaveforHue-OpenELEC-imx6.vis or WaveforHue-Ubuntu-x86.vis to WaveforHue.vis and re-zip. There is no way to differentiate Linux architectures in the addon.xml schema.

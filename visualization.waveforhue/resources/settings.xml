@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+  <setting id="UseWaveForm"    type="bool"       label="30006" default="true"/>
+  <setting id="HueBridgeIP"    type="ipaddress"  label="30000" default="192.168.10.6"/>
+  <setting id="NamesOfLights"  type="text"       label="30004" default="1,2,3"/>
+  <setting id="MaxBri"         type="slider"     label="30001" option="int" range="10,5,255" default="75"/>
+  <setting id="HueRangeUpper"  type="slider"     label="30002" option="int" range="0,200,65280" default="65280"/>
+  <setting id="HueRangeLower"  type="slider"     label="30003" option="int" range="0,200,65280" default="47000"/>
+  <setting id="BeatThreshold"  type="slider"     label="30005" option="float" range="0.0,0.025,1.0" default="0.25"/>
+</settings>

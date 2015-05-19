@@ -1,0 +1,49 @@
+# Kodi Media Center language file
+# Addon Name: Waveform Hue
+# Addon id: visualization.waveform
+# Addon Provider: 
+msgid ""
+msgstr ""
+"Project-Id-Version: XBMC Main\n"
+"Report-Msgid-Bugs-To: http://trac.xbmc.org/\n"
+"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: \n"
+"Language-Team: English (US) (http://www.transifex.com/projects/p/xbmc-main/language/en_US/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgctxt "#30000"
+msgid "Hue Bridge IP Address"
+msgstr "Hue Bridge IP Address"
+
+msgctxt "#30001"
+msgid "Max Brightness"
+msgstr "Max Brightness"
+
+msgctxt "#30002"
+msgid "Upper range of hue (1 to 65534)"
+msgstr "Upper range of hue (1 to 65534)"
+
+msgctxt "#30003"
+msgid "Lower range of hue (1 to 65534)"
+msgstr "Lower range of hue (1 to 65534)"
+
+msgctxt "#30004"
+msgid "Names of Hue light bulbs"
+msgstr "Names of Hue light bulbs"
+
+msgctxt "#30005"
+msgid "Beat threshold (from 0.05 to 1.00)"
+msgstr "Beat threshold (from 0.05 to 1.00)"
+
+msgctxt "#30006"
+msgid "WaveForm vis on?"
+msgstr "WaveForm vis on?"
+
+msgctxt "#30050"
+msgid "%2.0f bulbs"
+msgstr ""
