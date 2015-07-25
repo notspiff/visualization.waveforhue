@@ -38,7 +38,7 @@
 #include <GLES2/gl2ext.h>
 #endif
 
-#include "addons/include/xbmc_vis_dll.h"
+#include "xbmc_vis_dll.h"
 #include "VisGUIShader.h"
 
 //th
