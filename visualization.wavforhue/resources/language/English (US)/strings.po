@@ -21,8 +21,8 @@ msgid "Hue Bridge IP Address"
 msgstr "Hue Bridge IP Address"
 
 msgctxt "#30001"
-msgid "Max Brightness"
-msgstr "Max Brightness"
+msgid "Max Brightness of active lights"
+msgstr "Max Brightness of active lights"
 
 msgctxt "#30002"
 msgid "Upper range of hue (1 to 65534)"
@@ -33,8 +33,8 @@ msgid "Lower range of hue (1 to 65534)"
 msgstr "Lower range of hue (1 to 65534)"
 
 msgctxt "#30004"
-msgid "Names of Hue light bulbs"
-msgstr "Names of Hue light bulbs"
+msgid "Hue light bulb IDs"
+msgstr "Hue light bulb IDs"
 
 msgctxt "#30005"
 msgid "Beat threshold (from 0.05 to 1.00)"
@@ -47,6 +47,54 @@ msgstr "WaveForm vis on?"
 msgctxt "#30007"
 msgid "Fix Cubox HDMI flat wave?"
 msgstr "Fix Cubox HDMI flat wave?"
+
+msgctxt "#30008"
+msgid "Dimmed lights IDs"
+msgstr "Dimmed lights IDs"
+
+msgctxt "#30009"
+msgid "Dimmed lights brightness"
+msgstr "Dimmed lights brightness"
+
+msgctxt "#30010"
+msgid "Dimmed lights hue"
+msgstr "Dimmed lights hue"
+
+msgctxt "#30011"
+msgid "Dimmed lights saturation"
+msgstr "Dimmed lights saturation"
+
+msgctxt "#30012"
+msgid "Lights on after?"
+msgstr "Lights on after?"
+
+msgctxt "#30013"
+msgid "Active Lights"
+msgstr "Active Lights"
+
+msgctxt "#30014"
+msgid "Dimmed Lights"
+msgstr "Dimmed Lights"
+
+msgctxt "#30015"
+msgid "Brightness for after"
+msgstr "Brightness for after"
+
+msgctxt "#30016"
+msgid "Settings for when the music stops"
+msgstr "Settings for when the music stops"
+
+msgctxt "#30017"
+msgid "Hue for after"
+msgstr "Hue for after"
+
+msgctxt "#30018"
+msgid "Saturation for after"
+msgstr "Saturation for after"
+
+msgctxt "#30019"
+msgid "Lights IDs (others will turn off)"
+msgstr "Lights IDs (others will turn off)"
 
 msgctxt "#30050"
 msgid "%2.0f bulbs"

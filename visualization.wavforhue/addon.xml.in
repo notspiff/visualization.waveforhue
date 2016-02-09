@@ -2,7 +2,7 @@
 <addon
   id="visualization.wavforhue"
   version="0.0.2"
-  name="WaveforHue"
+  name="WavforHue"
   provider-name="hardyt">
   <extension
     point="xbmc.player.musicviz"

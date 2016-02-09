@@ -48,6 +48,7 @@
 #include <math.h>
 #include <sstream>
 #include <vector>
+#include <unistd.h>
 //
 
 #define NUM_BANDS 16
@@ -139,17 +140,21 @@ float g_movingAvgMid[128];
 float g_movingAvgMidSum;
 
 
-//th
+//th - settings used throughout
+bool useWaveForm = true;
 std::string strHueBridgeIPAddress = "192.168.10.6";
 std::string strHost = "Host: " + strHueBridgeIPAddress;
 std::string strURLRegistration = "http://" + strHueBridgeIPAddress + "/api";
 std::string strURLLight, strJson;
-std::vector<std::string> lightIDs;
-int numberOfLights = 3;
+std::vector<std::string> activeLightIDs, dimmedLightIDs, afterLightIDs;
+int numberOfActiveLights = 3, numberOfDimmedLights = 2, numberOfAfterLights = 1;
 int lastHue, initialHue, targetHue, maxBri, targetBri;
 int currentBri = 75;
 float beatThreshold = 0.25f;
-bool useWaveForm = true;
+int dimmedBri = 10, dimmedSat = 255, dimmedHue = 65280;
+int afterBri = 25, afterSat = 255, afterHue = 65280;
+bool lightsOnAfter = false;
+bool cuboxHDMIFix = false;
 float rgb[3] = { 1.0f, 1.0f, 1.0f };
 /* 
 This is used if audiodata is not coming from Kodi nicely.
@@ -158,8 +163,8 @@ has the right 1/4 of its waveforms flat because 0's are being reported by the vi
 API for that architecture.
 */
 int iMaxAudioData_i = 256;
-float iMaxAudioData_f = 255.0f;
-bool cuboxHDMIFix = false;
+float fMaxAudioData = 255.0f;
+
 
 
 struct timespec systemClock;
@@ -189,7 +194,7 @@ void hsvToRgb(float h, float s, float v, float _rgb[]) {
   _rgb[2] = b;
 }
 
-void HTTP_POST(int bri, int sat, int transitionTime, bool on, bool off)
+void HTTP_POST(int bri, int sat, int hue, int transitionTime, std::vector<std::string> lightIDs, int numberOfLights, bool on, bool off)
 {
 
   if (on) //turn on
@@ -199,7 +204,7 @@ void HTTP_POST(int bri, int sat, int transitionTime, bool on, bool off)
   else if (sat > 0) //change saturation
   {
     std::ostringstream oss;
-    oss << "{\"bri\":" << bri << ",\"hue\":" << lastHue <<
+    oss << "{\"bri\":" << bri << ",\"hue\":" << hue <<
       ",\"sat\":" << sat << ",\"transitiontime\":"
       << transitionTime << "}";
     strJson = oss.str();
@@ -207,7 +212,7 @@ void HTTP_POST(int bri, int sat, int transitionTime, bool on, bool off)
   else //change lights
   {
     std::ostringstream oss;
-    oss << "{\"bri\":" << bri << ",\"hue\":" << lastHue <<
+    oss << "{\"bri\":" << bri << ",\"hue\":" << hue <<
       ",\"transitiontime\":" << transitionTime << "}";
     strJson = oss.str();
   }
@@ -232,19 +237,19 @@ void HTTP_POST(int bri, int sat, int transitionTime, bool on, bool off)
   }
 }
 
-void TurnLightsOn()
+void TurnLightsOn(std::vector<std::string> lightIDs, int numberOfLights)
 {
-  HTTP_POST(0, 0, 0, true, false);
+  HTTP_POST(0, 0, 0, 0, lightIDs, numberOfLights, true, false);
 }
 
-void TurnLightsOff()
+void TurnLightsOff(std::vector<std::string> lightIDs, int numberOfLights)
 {
-  HTTP_POST(0, 0, 0, false, true);
+  HTTP_POST(0, 0, 0, 0, lightIDs, numberOfLights, false, true);
 }
 
-void UpdateLights(int bri, int sat, int transitionTime)
+void UpdateLights(int bri, int sat, int hue, int transitionTime, std::vector<std::string> lightIDs, int numberOfLights)
 {
-  HTTP_POST(bri, sat, transitionTime, false, false);
+  HTTP_POST(bri, sat, hue, transitionTime, lightIDs, numberOfLights, false, false);
 }
 
 void AdjustBrightness() //nicely bring the brightness up or down
@@ -262,9 +267,9 @@ void FastBeatLights()
   int beatBri = (int)(currentBri * 1.5f);
   if (beatBri > 255) beatBri = 255;
   //transition the color immediately
-  UpdateLights(beatBri, 0, 0);
+  UpdateLights(beatBri, 0, lastHue, 0, activeLightIDs, numberOfActiveLights);
   //fade brightness
-  UpdateLights(5, 0, 10); //fade
+  UpdateLights(5, 0, lastHue, 10, activeLightIDs, numberOfActiveLights); //fade
 }
 
 void SlowBeatLights()
@@ -274,9 +279,9 @@ void SlowBeatLights()
   int beatBri = (int)(currentBri * 1.25f);
   if (beatBri > 255) beatBri = 255;
   //transition the color immediately
-  UpdateLights(beatBri, 0, 2);
+  UpdateLights(beatBri, 0, lastHue, 2, activeLightIDs, numberOfActiveLights);
   //fade brightness
-  UpdateLights(5, 0, 8); //fade
+  UpdateLights(5, 0, lastHue, 8, activeLightIDs, numberOfActiveLights); //fade
 }
 
 void CycleHue(int huePoints)
@@ -304,9 +309,8 @@ void CycleLights()
   //this is called once per second if no beats are detected
   CycleHue(3000);
   AdjustBrightness();
-  UpdateLights(currentBri, 0, 10);
+  UpdateLights(currentBri, 0, lastHue, 10, activeLightIDs, numberOfActiveLights);
 }
-
 
 //taken from Vortex
 float AdjustRateToFPS(float per_frame_decay_rate_at_fps1, float fps1, float actual_fps)
@@ -363,8 +367,6 @@ void AnalyzeSound()
       g_sound.imm[0][i] /= (float)(end - start) * 2;
     }
   }
-
-
 
   // multiply by long-term, empirically-determined inverse averages:
   // (for a trial of 244 songs, 10 seconds each, somewhere in the 2nd or 3rd minute,
@@ -534,13 +536,20 @@ ADDON_STATUS ADDON_Create(void* hdl, void* props)
     return ADDON_STATUS_UNKNOWN;
   }
 
-  lightIDs.push_back("1");
-  lightIDs.push_back("2");
-  lightIDs.push_back("3");
+  activeLightIDs.push_back("1");
+  activeLightIDs.push_back("2");
+  activeLightIDs.push_back("3");
+  dimmedLightIDs.push_back("4");
+  dimmedLightIDs.push_back("5");
+  afterLightIDs.push_back("4");
 
+  //should this be ADDON_STATUS_NEED_SAVEDSETTINGS or ADDON_STATUS_NEED_SETTINGS?
   return ADDON_STATUS_NEED_SETTINGS;
 }
 
+//-- Start --------------------------------------------------------------------
+// Called when a new soundtrack is played
+//-----------------------------------------------------------------------------
 extern "C" void Start(int iChannels, int iSamplesPerSec, int iBitsPerSample, const char* szSongName)
 {
   //set Hue registration command
@@ -563,9 +572,13 @@ extern "C" void Start(int iChannels, int iSamplesPerSec, int iBitsPerSample, con
     // always cleanup (at the end)
   }
 
-  //turn the lights on
-  TurnLightsOn();
-  UpdateLights(currentBri, 255, 30);
+  //turn the Active lights on
+  TurnLightsOn(activeLightIDs, numberOfActiveLights);
+  UpdateLights(currentBri, 255, lastHue, 30, activeLightIDs, numberOfActiveLights);
+  
+  //dim the other lights
+  TurnLightsOn(dimmedLightIDs, numberOfDimmedLights);
+  UpdateLights(dimmedBri, dimmedSat, dimmedHue, 30, dimmedLightIDs, numberOfDimmedLights);
 
   //initialize the beat detection
   InitTime();
@@ -577,11 +590,11 @@ extern "C" void Start(int iChannels, int iSamplesPerSec, int iBitsPerSample, con
     g_movingAvgMid[i] = 0;
   }
   
-  //initialize the workaround for Cubox (imx6) HDMI workaround
+  //initialize the workaround for Cubox (imx6) HDMI
   if(cuboxHDMIFix)
   {
 	iMaxAudioData_i = 180;
-	iMaxAudioData_f = 179.0f;
+	fMaxAudioData = 179.0f;
   }
 }
 
@@ -674,7 +687,7 @@ extern "C" void Render()
       col[i][2] = rgb[2];
       //ver[i][0] = g_viewport.X + ((i / 255.0f) * g_viewport.Width);
       //ver[i][1] = g_viewport.Y + g_viewport.Height * 0.33f + (g_fWaveform[0][i] * g_viewport.Height * 0.15f);
-      ver[i][0] = -1.0f + ((i / iMaxAudioData_f) * 2.0f);
+      ver[i][0] = -1.0f + ((i / fMaxAudioData) * 2.0f);
       ver[i][1] = 0.5f + g_fWaveform[0][i];
       ver[i][2] = 1.0f;
       idx[i] = i;
@@ -690,7 +703,7 @@ extern "C" void Render()
       col[i][2] = rgb[2];
       //ver[i][0] = g_viewport.X + ((i / 255.0f) * g_viewport.Width);
       //ver[i][1] = g_viewport.Y + g_viewport.Height * 0.66f + (g_fWaveform[1][i] * g_viewport.Height * 0.15f);
-      ver[i][0] = -1.0f + ((i / iMaxAudioData_f) * 2.0f);
+      ver[i][0] = -1.0f + ((i / fMaxAudioData) * 2.0f);
       ver[i][1] = -0.5f + g_fWaveform[1][i];
       ver[i][2] = 1.0f;
       idx[i] = i;
@@ -789,9 +802,26 @@ extern "C" void ADDON_Destroy()
     vis_shader = NULL;
   }
 
-  TurnLightsOff();
+  //change the lights to something acceptable
+  //wait a second to allow the Hue Bridge to catch up
+  usleep(500);
+  if(lightsOnAfter)
+  {
+	TurnLightsOff(activeLightIDs, numberOfActiveLights);
+	TurnLightsOff(dimmedLightIDs, numberOfDimmedLights);
+	usleep(200);	
+	TurnLightsOn(afterLightIDs, numberOfAfterLights);
+	UpdateLights(afterBri, afterSat, afterHue, 30, afterLightIDs, numberOfAfterLights);
+  }
+  else
+  {
+	TurnLightsOff(activeLightIDs, numberOfActiveLights);
+	TurnLightsOff(dimmedLightIDs, numberOfDimmedLights);
+  }
+  
   g_fftobj.CleanUp();
-  // always cleanup 
+  
+  // always cleanup curl
   curl_easy_cleanup(curl);
 }
 
@@ -840,35 +870,33 @@ extern "C" ADDON_STATUS ADDON_SetSetting(const char *strSetting, const void* val
   if (!strSetting || !value)
     return ADDON_STATUS_UNKNOWN;
 
-
   if (strcmp(strSetting, "UseWaveForm") == 0)
     useWaveForm = *(bool*)value == 1;
-  else if (strcmp(strSetting, "CuboxHDMIFix") == 0)
-	cuboxHDMIFix = *(bool*)value == 1;
-  else if (strcmp(strSetting, "NamesOfLights") == 0)
-  {
-    char* array;
-    array = (char*)value;
-    std::string lightIDsUnsplit = std::string(array);
-    lightIDs.clear();
-    std::string delimiter = ",";
-    size_t last = 0;
-    size_t next = 0;
-    while ((next = lightIDsUnsplit.find(delimiter, last)) != std::string::npos)
-    {
-      lightIDs.push_back(lightIDsUnsplit.substr(last, next - last));
-      last = next + 1;
-    }
-    //do the last light token
-    lightIDs.push_back(lightIDsUnsplit.substr(last));
-    numberOfLights = lightIDs.size();
-  }
   else if (strcmp(strSetting, "HueBridgeIP") == 0)
   {
     char* array;
     array = (char*)value;
     strHueBridgeIPAddress = std::string(array);
     strURLRegistration = "http://" + strHueBridgeIPAddress + "/api";
+  }
+//----------------------------------------------------------  
+  else if (strcmp(strSetting, "ActiveLights") == 0)
+  {
+    char* array;
+    array = (char*)value;
+    std::string activeLightIDsUnsplit = std::string(array);
+    activeLightIDs.clear();
+    std::string delimiter = ",";
+    size_t last = 0;
+    size_t next = 0;
+    while ((next = activeLightIDsUnsplit.find(delimiter, last)) != std::string::npos)
+    {
+      activeLightIDs.push_back(activeLightIDsUnsplit.substr(last, next - last));
+      last = next + 1;
+    }
+    //do the last light token
+    activeLightIDs.push_back(activeLightIDsUnsplit.substr(last));
+    numberOfActiveLights = activeLightIDs.size();
   }
   else if (strcmp(strSetting, "BeatThreshold") == 0)
     beatThreshold = *(float*)value;
@@ -881,6 +909,61 @@ extern "C" ADDON_STATUS ADDON_SetSetting(const char *strSetting, const void* val
   }
   else if (strcmp(strSetting, "HueRangeLower") == 0)
     targetHue = *(int*)value;
+//----------------------------------------------------------
+  else if (strcmp(strSetting, "DimmedLights") == 0)
+  {
+    char* array;
+    array = (char*)value;
+    std::string dimmedLightIDsUnsplit = std::string(array);
+    dimmedLightIDs.clear();
+    std::string delimiter = ",";
+    size_t last = 0;
+    size_t next = 0;
+    while ((next = dimmedLightIDsUnsplit.find(delimiter, last)) != std::string::npos)
+    {
+      dimmedLightIDs.push_back(dimmedLightIDsUnsplit.substr(last, next - last));
+      last = next + 1;
+    }
+    //do the last light token
+    dimmedLightIDs.push_back(dimmedLightIDsUnsplit.substr(last));
+    numberOfDimmedLights = dimmedLightIDs.size();
+  }
+  else if (strcmp(strSetting, "DimmedBri") == 0)
+    dimmedBri = *(int*)value;
+  else if (strcmp(strSetting, "DimmedSat") == 0)
+    dimmedSat = *(int*)value;
+  else if (strcmp(strSetting, "DimmedHue") == 0)
+    dimmedHue = *(int*)value;
+//----------------------------------------------------------
+  else if (strcmp(strSetting, "LightsOnAfter") == 0)
+	lightsOnAfter = *(bool*)value == 1;
+  else if (strcmp(strSetting, "AfterLights") == 0)
+  {
+    char* array;
+    array = (char*)value;
+    std::string afterLightIDsUnsplit = std::string(array);
+    afterLightIDs.clear();
+    std::string delimiter = ",";
+    size_t last = 0;
+    size_t next = 0;
+    while ((next = afterLightIDsUnsplit.find(delimiter, last)) != std::string::npos)
+    {
+      afterLightIDs.push_back(afterLightIDsUnsplit.substr(last, next - last));
+      last = next + 1;
+    }
+    //do the last light token
+    afterLightIDs.push_back(afterLightIDsUnsplit.substr(last));
+    numberOfAfterLights = afterLightIDs.size();
+  }
+  else if (strcmp(strSetting, "AfterBri") == 0)
+    afterBri = *(int*)value;
+  else if (strcmp(strSetting, "AfterSat") == 0)
+    afterSat = *(int*)value;
+  else if (strcmp(strSetting, "AfterHue") == 0)
+    afterHue = *(int*)value;
+//----------------------------------------------------------
+  else if (strcmp(strSetting, "CuboxHDMIFix") == 0)
+	cuboxHDMIFix = *(bool*)value == 1; 
   else
     return ADDON_STATUS_UNKNOWN;
 
