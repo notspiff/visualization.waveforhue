@@ -19,15 +19,18 @@
 */
 
 // Waveform.vis
-// A simple visualisation example by MrC
+// Was a simple visualisation example by MrC
 
-#include "xbmc_vis_dll.h"
 #include <stdio.h>
 #ifdef HAS_OPENGL
+#include "xbmc_vis_dll.h" //so I can build for windows
 #include <GL/glew.h>
+#include <unistd.h>
 #else
 #ifdef _WIN32
 #include <D3D9.h>
+#include <windows.h>
+#include "addons/include/xbmc_vis_dll.h"
 #endif
 #endif
 
@@ -38,7 +41,7 @@
 #include <math.h>
 #include <sstream>
 #include <vector>
-#include <unistd.h>
+
 //
 
 char g_visName[512];
@@ -263,9 +266,9 @@ void SlowBeatLights()
   int beatBri = (int)(currentBri * 1.25f);
   if (beatBri > 255) beatBri = 255;
   //transition the color immediately
-  UpdateLights(beatBri, 0, 2);
+  UpdateLights(beatBri, 0, lastHue, 2, activeLightIDs, numberOfActiveLights);
   //fade brightness
-  UpdateLights(5, 0, 8); //fade
+  UpdateLights(5, 0, lastHue, 8, activeLightIDs, numberOfActiveLights); //fade
 }
 
 void CycleHue(int huePoints)
@@ -543,7 +546,18 @@ void UpdateTime()
   }
 }
 
+#ifdef _WIN32
+void usleep(int waitTime) {
+  __int64 time1 = 0, time2 = 0, freq = 0;
 
+  QueryPerformanceCounter((LARGE_INTEGER *)&time1);
+  QueryPerformanceFrequency((LARGE_INTEGER *)&freq);
+
+  do {
+    QueryPerformanceCounter((LARGE_INTEGER *)&time2);
+  } while ((time2 - time1) < waitTime);
+}
+#endif
 
 
 //-- Create -------------------------------------------------------------------
