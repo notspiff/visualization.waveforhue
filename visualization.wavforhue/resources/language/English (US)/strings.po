@@ -1,6 +1,6 @@
 # Kodi Media Center language file
-# Addon Name: Waveform Hue
-# Addon id: visualization.waveform
+# Addon Name: WavforHue
+# Addon id: visualization.wavforhue
 # Addon Provider: 
 msgid ""
 msgstr ""
@@ -39,6 +39,14 @@ msgstr "Names of Hue light bulbs"
 msgctxt "#30005"
 msgid "Beat threshold (from 0.05 to 1.00)"
 msgstr "Beat threshold (from 0.05 to 1.00)"
+
+msgctxt "#30006"
+msgid "WaveForm vis on?"
+msgstr "WaveForm vis on?"
+
+msgctxt "#30007"
+msgid "Fix Cubox HDMI flat wave?"
+msgstr "Fix Cubox HDMI flat wave?"
 
 msgctxt "#30050"
 msgid "%2.0f bulbs"

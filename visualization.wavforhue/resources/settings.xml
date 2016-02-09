@@ -7,4 +7,5 @@
   <setting id="HueRangeUpper"  type="slider"     label="30002" option="int" range="0,200,65280" default="65280"/>
   <setting id="HueRangeLower"  type="slider"     label="30003" option="int" range="0,200,65280" default="47000"/>
   <setting id="BeatThreshold"  type="slider"     label="30005" option="float" range="0.0,0.025,1.0" default="0.25"/>
+  <setting id="CuboxHDMIFix"   type="bool"       label="30007" option="false"/>
 </settings>

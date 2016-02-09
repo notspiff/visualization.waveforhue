@@ -133,6 +133,15 @@ int currentBri = 75;
 float beatThreshold = 0.25f;
 bool useWaveForm = true;
 float rgb[3] = { 1.0f, 1.0f, 1.0f };
+/* 
+This is used if audiodata is not coming from Kodi nicely.
+The problem is with Solidrun's Cubox (imx6) set to HDMI audio out. The Waveform visualisation
+has the right 1/4 of its waveforms flat because 0's are being reported by the visualisation
+API for that architecture.
+*/
+int iMaxAudioData_i = 256;
+float iMaxAudioData_f = 255.0f;
+bool cuboxHDMIFix = false;
 
 
 #ifndef _WIN32
@@ -601,6 +610,13 @@ extern "C" void Start(int iChannels, int iSamplesPerSec, int iBitsPerSample, con
   {
     g_movingAvgMid[i] = 0;
   }
+  
+  //initialize the workaround for Cubox (imx6) HDMI workaround
+  if(cuboxHDMIFix)
+  {
+	iMaxAudioData_i = 180;
+	iMaxAudioData_f = 179.0f;
+  }
 }
 
 //-- Audiodata ----------------------------------------------------------------
@@ -671,14 +687,15 @@ extern "C" void Render()
     glTranslatef(0, 0, -1.0);
     glBegin(GL_LINE_STRIP);
 #endif
-    for (int i = 0; i < 256; i++)
+	// Left channel
+    for (int i = 0; i < iMaxAudioData_i; i++)
     {
 #ifndef HAS_OPENGL
       verts[i].col = D3DCOLOR_COLORVALUE(rgb[0], rgb[1], rgb[2], 1.0);
 #else
       verts[i].col = 0xffffffff;
 #endif
-      verts[i].x = g_viewport.X + ((i / 255.0f) * g_viewport.Width);
+      verts[i].x = g_viewport.X + ((i / iMaxAudioData_f) * g_viewport.Width);
       verts[i].y = g_viewport.Y + g_viewport.Height * 0.33f + (g_fWaveform[0][i] * g_viewport.Height * 0.15f);
       verts[i].z = 1.0;
 #ifdef HAS_OPENGL
@@ -692,21 +709,21 @@ extern "C" void Render()
       printf("Houston, we have a GL problem: %s\n", gluErrorString(errcode));
     }
 #elif !defined(HAS_OPENGL)
-    g_device->DrawPrimitiveUP(D3DPT_LINESTRIP, 255, verts, sizeof(Vertex_t));
+    g_device->DrawPrimitiveUP(D3DPT_LINESTRIP, iMaxAudioData_i-1, verts, sizeof(Vertex_t));
 #endif
 
     // Right channel
 #ifdef HAS_OPENGL
     glBegin(GL_LINE_STRIP);
 #endif
-    for (int i = 0; i < 256; i++)
+    for (int i = 0; i < iMaxAudioData_i; i++)
     {
 #ifndef HAS_OPENGL
       verts[i].col = D3DCOLOR_COLORVALUE(rgb[0], rgb[1], rgb[2], 1.0);
 #else
       verts[i].col = 0xffffffff;
 #endif
-      verts[i].x = g_viewport.X + ((i / 255.0f) * g_viewport.Width);
+      verts[i].x = g_viewport.X + ((i / iMaxAudioData_f) * g_viewport.Width);
       verts[i].y = g_viewport.Y + g_viewport.Height * 0.66f + (g_fWaveform[1][i] * g_viewport.Height * 0.15f);
       verts[i].z = 1.0;
 #ifdef HAS_OPENGL
@@ -722,7 +739,7 @@ extern "C" void Render()
       printf("Houston, we have a GL problem: %s\n", gluErrorString(errcode));
     }
 #elif !defined(HAS_OPENGL)
-    g_device->DrawPrimitiveUP(D3DPT_LINESTRIP, 255, verts, sizeof(Vertex_t));
+    g_device->DrawPrimitiveUP(D3DPT_LINESTRIP, iMaxAudioData_i-1, verts, sizeof(Vertex_t));
 #endif
   }
 
@@ -850,6 +867,8 @@ extern "C" ADDON_STATUS ADDON_SetSetting(const char *strSetting, const void* val
 
   if (strcmp(strSetting, "UseWaveForm") == 0)
     useWaveForm = *(bool*)value == 1;
+  else if (strcmp(strSetting, "CuboxHDMIFix") == 0)
+	cuboxHDMIFix = *(bool*)value == 1;
   else if (strcmp(strSetting, "NamesOfLights") == 0)
   {
     char* array;
@@ -857,8 +876,8 @@ extern "C" ADDON_STATUS ADDON_SetSetting(const char *strSetting, const void* val
     std::string lightIDsUnsplit = std::string(array);
     lightIDs.clear();
     std::string delimiter = ",";
-    int last = 0;
-    int next = 0;
+    size_t last = 0;
+    size_t next = 0;
     while ((next = lightIDsUnsplit.find(delimiter, last)) != std::string::npos)
     {
       lightIDs.push_back(lightIDsUnsplit.substr(last, next - last));

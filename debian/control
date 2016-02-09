@@ -1,0 +1,22 @@
+Source: kodi-visualization-wavforhue
+Priority: extra
+Maintainer: Thomas M. Hady <thomasmhardy@gmail.com>
+Build-Depends: debhelper (>= 8.0.0), cmake, kodi-addon-dev, libkodiplatform-dev,
+               kodi-visualization-dev, libgl1-mesa-dev
+Standards-Version: 3.9.5
+Section: libs
+Homepage: http://www.thomasmhardy.com
+
+Package: kodi-visualization-wavforhue
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Waveform visualization for Kodi and Philips Hue
+ Waveform visualization for Kodi and Philips Hue
+
+Package: kodi-visualization-wavforhue-dbg
+Section: debug
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: debug symbols for Waveform visualization for Kodi and Philips Hue
+ debug symbols for Waveform visualization for Kodi and Philips Hue

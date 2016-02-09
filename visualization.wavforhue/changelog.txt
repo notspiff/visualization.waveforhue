@@ -1,0 +1,6 @@
+v0.0.1
+- Initial version
+
+v0.0.2
+- cmake version
+- workaround for audiodata not presenting correctly through the visualization api on Cubox (imx6) using HDMI audio output

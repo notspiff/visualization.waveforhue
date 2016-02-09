@@ -151,6 +151,15 @@ int currentBri = 75;
 float beatThreshold = 0.25f;
 bool useWaveForm = true;
 float rgb[3] = { 1.0f, 1.0f, 1.0f };
+/* 
+This is used if audiodata is not coming from Kodi nicely.
+The problem is with Solidrun's Cubox (imx6) set to HDMI audio out. The Waveform visualisation
+has the right 1/4 of its waveforms flat because 0's are being reported by the visualisation
+API for that architecture.
+*/
+int iMaxAudioData_i = 256;
+float iMaxAudioData_f = 255.0f;
+bool cuboxHDMIFix = false;
 
 
 struct timespec systemClock;
@@ -567,6 +576,13 @@ extern "C" void Start(int iChannels, int iSamplesPerSec, int iBitsPerSample, con
   {
     g_movingAvgMid[i] = 0;
   }
+  
+  //initialize the workaround for Cubox (imx6) HDMI workaround
+  if(cuboxHDMIFix)
+  {
+	iMaxAudioData_i = 180;
+	iMaxAudioData_f = 179.0f;
+  }
 }
 
 //-- Audiodata ----------------------------------------------------------------
@@ -651,37 +667,37 @@ extern "C" void Render()
     glEnableVertexAttribArray(posLoc);
     glEnableVertexAttribArray(colLoc);
 
-    for (int i = 0; i < 256; i++)
+    for (int i = 0; i < iMaxAudioData_i; i++)
     {
       col[i][0] = rgb[0];
       col[i][1] = rgb[1];
       col[i][2] = rgb[2];
       //ver[i][0] = g_viewport.X + ((i / 255.0f) * g_viewport.Width);
       //ver[i][1] = g_viewport.Y + g_viewport.Height * 0.33f + (g_fWaveform[0][i] * g_viewport.Height * 0.15f);
-      ver[i][0] = -1.0f + ((i / 255.0f) * 2.0f);
+      ver[i][0] = -1.0f + ((i / iMaxAudioData_f) * 2.0f);
       ver[i][1] = 0.5f + g_fWaveform[0][i];
       ver[i][2] = 1.0f;
       idx[i] = i;
     }
 
-    glDrawElements(GL_LINE_STRIP, 256, GL_UNSIGNED_BYTE, idx);
+    glDrawElements(GL_LINE_STRIP, iMaxAudioData_i, GL_UNSIGNED_BYTE, idx);
 
     // Right channel
-    for (int i = 0; i < 256; i++)
+    for (int i = 0; i < iMaxAudioData_i; i++)
     {
       col[i][0] = rgb[0];
       col[i][1] = rgb[1];
       col[i][2] = rgb[2];
       //ver[i][0] = g_viewport.X + ((i / 255.0f) * g_viewport.Width);
       //ver[i][1] = g_viewport.Y + g_viewport.Height * 0.66f + (g_fWaveform[1][i] * g_viewport.Height * 0.15f);
-      ver[i][0] = -1.0f + ((i / 255.0f) * 2.0f);
+      ver[i][0] = -1.0f + ((i / iMaxAudioData_f) * 2.0f);
       ver[i][1] = -0.5f + g_fWaveform[1][i];
       ver[i][2] = 1.0f;
       idx[i] = i;
 
     }
 
-    glDrawElements(GL_LINE_STRIP, 256, GL_UNSIGNED_BYTE, idx);
+    glDrawElements(GL_LINE_STRIP, iMaxAudioData_i, GL_UNSIGNED_BYTE, idx);
 
     glDisableVertexAttribArray(posLoc);
     glDisableVertexAttribArray(colLoc);
@@ -827,6 +843,8 @@ extern "C" ADDON_STATUS ADDON_SetSetting(const char *strSetting, const void* val
 
   if (strcmp(strSetting, "UseWaveForm") == 0)
     useWaveForm = *(bool*)value == 1;
+  else if (strcmp(strSetting, "CuboxHDMIFix") == 0)
+	cuboxHDMIFix = *(bool*)value == 1;
   else if (strcmp(strSetting, "NamesOfLights") == 0)
   {
     char* array;
@@ -834,8 +852,8 @@ extern "C" ADDON_STATUS ADDON_SetSetting(const char *strSetting, const void* val
     std::string lightIDsUnsplit = std::string(array);
     lightIDs.clear();
     std::string delimiter = ",";
-    int last = 0;
-    int next = 0;
+    size_t last = 0;
+    size_t next = 0;
     while ((next = lightIDsUnsplit.find(delimiter, last)) != std::string::npos)
     {
       lightIDs.push_back(lightIDsUnsplit.substr(last, next - last));

@@ -1,4 +1,4 @@
-project(visualization.spectrum)
+project(visualization.wavforhue)
 
 cmake_minimum_required(VERSION 2.6)
 
@@ -7,21 +7,44 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 find_package(kodi REQUIRED)
 find_package(CURL REQUIRED)
 
+set(WAVFORHUE_SOURCES src/Main.cpp)
+
 if(WIN32)
-  find_package(DirectX REQUIRED)
-  set(INCLUDES ${DIRECTX_INCLUDE_DIR})
-  add_definitions(-D_WIN32PC -D_USRDLL)
-  set(WAVEFORHUE_SOURCES src/Main.cpp
+  set(SHADER_FILES src/DefaultVertexShader.hlsl
+                   src/DefaultPixelShader.hlsl)
+  set(SHADER_INCLUDES)
+  foreach( SHADER_FILE ${SHADER_FILES} )
+    get_filename_component( FileName ${SHADER_FILE} NAME_WE )
+    if(${FileName} MATCHES "(.+Vertex.+)")
+      set(ShaderType vs)
+    elseif(${FileName} MATCHES "(.+Pixel.+)")
+      set(ShaderType ps)
+    else()
+      message(FATAL_ERROR ${SHADER_FILE}": Unknown shader type.")
+    endif()
+    set( IncFile src/${FileName}.inc )
+    list( APPEND SHADER_INCLUDES ${IncFile} )
+
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${IncFile}
+      COMMAND fxc /nologo /T${ShaderType}_4_0_level_9_1 /Vn ${FileName}Code /Fh ${IncFile} ${SHADER_FILE}
+      MAIN_DEPENDENCY ${SHADER_FILE}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      VERBATIM)
+  endforeach(SHADER_FILE)
+  add_custom_target(generate ALL DEPENDS ${SHADER_INCLUDES})
+
+  set(WAVFORHUE_SOURCES src/Main.cpp
                          src/fft.cpp)
-  set(DEPLIBS ${DIRECTX_D3DX9_LIBRARY})
-else(WIN32)
+  
+else()
   find_package(OpenGL)
   if(OPENGL_FOUND)
     find_package(GLEW REQUIRED)
     set(INCLUDES ${OpenGL_INCLUDE_DIR}
                  ${GLEW_INCLUDE_DIR})
     add_definitions(-DHAS_OPENGL)
-    set(WAVEFORHUE_SOURCES src/Main.cpp
+    set(WAVFORHUE_SOURCES src/Main.cpp
                            src/fft.cpp)
     set(DEPLIBS ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES})
   else()
@@ -29,8 +52,9 @@ else(WIN32)
     if(OPENGLES2_FOUND)
       set(INCLUDES ${OPENGLES2_INCLUDE_DIR})
       add_definitions(-DHAS_GLES2)
-      set(WAVEFORHUE_SOURCES src/Main_gles.cpp
+      set(WAVFORHUE_SOURCES src/Main_gles.cpp
                              src/fft.cpp
+							 src/VisGUIShader.cpp
                              src/VisMatrixGLES.cpp
                              src/VisShader.cpp)
       set(DEPLIBS ${OPENGLES2_LIBRARIES})
@@ -46,6 +70,6 @@ include_directories(${INCLUDES}
 
 list(APPEND DEPLIBS ${CURL_LIBRARIES})
 
-build_addon(visualization.waveforhue WAVEFORHUE DEPLIBS)
+build_addon(visualization.wavforhue WAVFORHUE DEPLIBS)
 
 include(CPack)
