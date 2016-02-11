@@ -1,8 +1,9 @@
 Source: kodi-visualization-wavforhue
 Priority: extra
 Maintainer: Thomas M. Hady <thomasmhardy@gmail.com>
-Build-Depends: debhelper (>= 8.0.0), cmake, kodi-addon-dev, libkodiplatform-dev,
-               kodi-visualization-dev, libgl1-mesa-dev
+Build-Depends: debhelper (>= 8.0.0), cmake, kodi-addon-dev,
+               kodi-visualization-dev, libgl1-mesa-dev, libcurl4-openssl-dev,
+               libglew-dev
 Standards-Version: 3.9.5
 Section: libs
 Homepage: http://www.thomasmhardy.com
